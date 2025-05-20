@@ -44,7 +44,7 @@ registration/
 docker-compose up --build
 ```
 
-App will be available at: [http://localhost:8080](http://localhost:8080)
+App will be available at: [http://localhost:8082](http://localhost:8082)
 
 ---
 
