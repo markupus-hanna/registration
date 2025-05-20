@@ -1,7 +1,5 @@
 <?php
 
-namespace App\Core;
-
 /**
  * Checks if the current user is authenticated (logged in).
  *

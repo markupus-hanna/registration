@@ -30,17 +30,17 @@ class User
      *                    'first_name', 'last_name', 'email', 'phone', 'password'
      * @return void
      */
-    public function create($data): void
+    public function create(array $data): void
     {
-        $this->db->query("
+        $stmt = $this->db->prepare("
             INSERT INTO users (first_name, last_name, email, phone, password) 
             VALUES (:first_name, :last_name, :email, :phone, :password)");
-        $this->db->bind(':first_name', $data['first_name']);
-        $this->db->bind(':last_name', $data['last_name']);
-        $this->db->bind(':email', $data['email']);
-        $this->db->bind(':phone', $data['phone']);
-        $this->db->bind(':password', password_hash($data['password'], PASSWORD_DEFAULT));
-        $this->db->execute();
+        $stmt->bindValue(':first_name', $data['first_name']);
+        $stmt->bindValue(':last_name', $data['last_name']);
+        $stmt->bindValue(':email', $data['email']);
+        $stmt->bindValue(':phone', $data['phone']);
+        $stmt->bindValue(':password', password_hash($data['password'], PASSWORD_DEFAULT));
+        $stmt->execute();
     }
 
     /**
@@ -49,11 +49,10 @@ class User
      * @param string $email The email to search for.
      * @return array The user data as an associative array, or empty array if not found.
      */
-    public function findByEmail($email): array
+    public function findByEmail(string $email): ?array
     {
         $this->db->query("SELECT * FROM users WHERE email = :email");
         $this->db->bind(':email', $email);
-        $this->db->execute();
         return $this->db->result();
     }
 }

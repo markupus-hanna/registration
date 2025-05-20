@@ -15,11 +15,11 @@ class Controller
      * @param string $model The name of the model to load.
      * @return mixed An instance of the requested model class.
      */
-    protected function loadModel($model): mixed
+    protected function loadModel(string $model): mixed
     {
         $modelClass = 'App\\Models\\' . $model;
         if (!class_exists($modelClass)) {
-            require_once __DIR__ . '/../models/' . $model . '.php';
+            throw new \Exception("Model $modelClass not found");
         }
 
         return new $modelClass;
@@ -32,7 +32,7 @@ class Controller
      * @param array $data Optional associative array of data to be extracted and used in the view.
      * @return void
      */
-    protected function renderView($viewPath, $data = []): void
+    protected function renderView(string $viewPath, array $data = []): void
     {
         extract($data);
         require_once __DIR__ . '/../views/layout.php';

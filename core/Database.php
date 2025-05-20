@@ -2,10 +2,8 @@
 
 namespace App\Core;
 
-require_once __DIR__ . '/../config/config.php';
-
-use \PDO;
-use \PDOException;
+use PDO;
+use PDOException;
 
 /**
  * Class Database
@@ -14,43 +12,58 @@ use \PDOException;
  */
 class Database
 {
-    private $host = DB_HOST;
-    private $user = DB_USER;
-    private $password = DB_PASS;
-    private $dbname = DB_NAME;
-    private $dbport = DB_PORT;
-
-    private $dbh;   // Database handle
-    private $stmt;  // Prepared statement
-    private $error; // Connection error message
+    private static ?PDO $instance = null;
+    private PDO $dbh;   // Local reference to shared DB instance
+    private \PDOStatement $stmt; // Prepared statement
+    private string $error = '';
 
     /**
      * Database constructor.
-     * Initializes PDO connection with provided configuration.
+     * Uses singleton instance for PDO and stores a local handle.
      */
     public function __construct()
     {
-        $dsn = 'mysql:host=' . $this->host . ';dbname=' . $this->dbname . ';port=' . $this->dbport;
+        $this->dbh = self::getInstance();
+    }
 
-        $options = [
-            PDO::ATTR_PERSISTENT => true,
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION // Throw exceptions on errors
-        ];
-        try {
-            $this->dbh = new PDO($dsn, $this->user, $this->password, $options);
-        } catch (PDOException $e) {
-            $this->error = $e->getMessage();
-            echo $this->error;
+    /**
+     * Returns a singleton PDO instance.
+     *
+     * @return PDO
+     */
+    public static function getInstance(): PDO
+    {
+        if (!self::$instance) {
+            $host = getenv("DB_HOST");
+            $db   = getenv("DB_NAME");
+            $user = getenv("DB_USER");
+            $pass = getenv("DB_PASS");
+
+            $dsn = "mysql:host=$host;dbname=$db;charset=utf8mb4";
+
+            $options = [
+                PDO::ATTR_PERSISTENT         => true,
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ];
+
+            try {
+                self::$instance = new PDO($dsn, $user, $pass, $options);
+            } catch (PDOException $e) {
+                die("Database connection error: " . $e->getMessage());
+            }
         }
+
+        return self::$instance;
     }
 
     /**
      * Prepares an SQL query for execution.
      *
-     * @param string $sql The SQL query to prepare.
+     * @param string $sql
      * @return void
      */
-    public function query($sql): void
+    public function query(string $sql): void
     {
         $this->stmt = $this->dbh->prepare($sql);
     }
@@ -58,32 +71,32 @@ class Database
     /**
      * Executes the prepared SQL statement.
      *
-     * @return bool True on success, false on failure.
+     * @return bool
      */
-    public function execute()
+    public function execute(): bool
     {
         return $this->stmt->execute();
     }
 
     /**
-     * Executes the statement and fetches a single result as an associative array.
+     * Executes the statement and fetches a single result.
      *
-     * @return array The fetched result.
+     * @return array|null
      */
-    public function result(): array
+    public function result(): ?array
     {
         $this->execute();
-        return $this->stmt->fetch(PDO::FETCH_ASSOC);
+        return $this->stmt->fetch() ?: null;
     }
 
     /**
      * Binds a value to a parameter in the prepared statement.
      *
-     * @param string|int $param The placeholder name or position.
-     * @param mixed $value The value to bind.
+     * @param string|int $param
+     * @param mixed $value
      * @return void
      */
-    public function bind($param, $value): void
+    public function bind(string|int $param, mixed $value): void
     {
         $this->stmt->bindValue($param, $value);
     }

@@ -27,6 +27,6 @@
     </small>
     <div>
         <button class="btn btn-primary">Register</button>
-        <a class="btn btn-secondary" href="?url=login">Login</a>
+        <a class="btn btn-secondary" href="/login">Login</a>
     </div>
 </form>

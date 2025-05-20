@@ -9,45 +9,50 @@ namespace App\Core;
  */
 class App
 {
-    protected $controller = 'IndexController';
-    protected $method = 'dashboard';
-    protected $params = [];
+    protected object $controller;
+    protected string $method;
+    protected array $params = [];
+    protected array $routes = [];
 
     /**
      * App constructor.
      *
-     * Parses the URL, checks route access based on session,
-     * loads the corresponding controller and method, and invokes the action.
+     * Parses the URL, determines controller & method based on the route,
+     * and invokes the action.
      */
-    public function __construct()
+    public function __construct(array $routes)
     {
+        $this->routes = $routes;
         session_start();
-        $urlParts = $this->parseUrl();
-        require_once __DIR__ . '/../routes.php';
 
-        $route = $urlParts[0] ?? 'dashboard';
+        $urlParts = $this->parseUrl();
+
+        $routeBase = $urlParts[0] ?? 'dashboard';
         if (isset($urlParts[1])) {
-            $route .= '/' . $urlParts[1];
+            $routeBase .= '/' . $urlParts[1];
         }
 
-        $publicRoutes = ['login', 'register'];
+        $requestMethod = strtolower($_SERVER['REQUEST_METHOD']);
+        $routeKey = strtolower($routeBase . '.' . $requestMethod);
 
-        if (!in_array($route, $publicRoutes) && !isset($_SESSION['user'])) {
-            header('Location: /?url=login');
+        $publicRoutes = ['login.get', 'login.post', 'register.get', 'register.post'];
+
+        if (!in_array($routeKey, $publicRoutes) && !isset($_SESSION['user'])) {
+            header('Location: /login');
             exit;
         }
 
-        if (!isset($routes[$route])) {
+        if (!isset($this->routes[$routeKey])) {
             http_response_code(404);
             echo "404 - Route Not Found!";
             return;
         }
 
-        $this->controller = $routes[$route]['controller'];
-        $this->method = $routes[$route]['method'];
+        $controllerName = $this->routes[$routeKey]['controller'];
+        $method = $this->routes[$routeKey]['method'];
         $this->params = array_slice($urlParts, 2);
 
-        $controllerClass = 'App\\Controllers\\' . $this->controller;
+        $controllerClass = 'App\\Controllers\\' . $controllerName;
 
         if (!class_exists($controllerClass)) {
             http_response_code(500);
@@ -56,19 +61,19 @@ class App
         }
 
         $this->controller = new $controllerClass;
+        $this->method = $method;
         call_user_func_array([$this->controller, $this->method], $this->params);
     }
 
     /**
-     * Parses the URL from the query parameter and returns the route parts as an array.
+     * Parses the URL from the request and returns parts as an array.
      *
-     * @return array The URL segments split by "/"
+     * @return array
      */
     private function parseUrl(): array
     {
-        if (isset($_GET['url'])) {
-            return explode('/', filter_var(rtrim($_GET['url'], '/'), FILTER_SANITIZE_URL));
-        }
-        return [''];
+        $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $uri = trim($uri, '/');
+        return explode('/', $uri);
     }
 }
